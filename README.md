@@ -39,7 +39,7 @@ Requirements: **.NET 9.0 SDK**
 git clone https://github.com/yourusername/AppHiderDotNet.git
 
 # Navigate to the project folder
-cd AppHiderNet
+cd AppHiderDotNet
 
 # Build the project
 dotnet build
