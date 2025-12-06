@@ -36,7 +36,7 @@ Requirements: **.NET 9.0 SDK**
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/AppHiderNet.git
+git clone https://github.com/yourusername/AppHiderDotNet.git
 
 # Navigate to the project folder
 cd AppHiderNet
