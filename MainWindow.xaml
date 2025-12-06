@@ -1,0 +1,64 @@
+﻿<Window x:Class="AppHiderNet.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AppHiderNet"
+        mc:Ignorable="d"
+        Title="App Hider Manager" Height="400" Width="500"
+        Icon="app_icon.png"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterScreen"
+        AllowsTransparency="True"
+        WindowStyle="None"
+        Background="Transparent">
+    
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40" ResizeBorderThickness="5" GlassFrameThickness="-1"/>
+    </WindowChrome.WindowChrome>
+
+    <Border Background="{StaticResource GlassBackgroundBrush}" 
+            BorderBrush="{StaticResource GlassBorderBrush}" 
+            BorderThickness="1" 
+            CornerRadius="15"
+            MouseLeftButtonDown="Window_MouseLeftButtonDown">
+        
+        <Grid Margin="15">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Custom Title Bar -->
+            <Grid Grid.Row="0" Margin="0,0,0,15">
+                <TextBlock Text="App Hider Manager" 
+                           Foreground="White" 
+                           FontSize="18" 
+                           FontWeight="Bold" 
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Left"
+                           Margin="10,0,0,0"/>
+                
+                <Button Content="✕" 
+                        HorizontalAlignment="Right" 
+                        VerticalAlignment="Center"
+                        Width="30" Height="30"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="White"
+                        Click="CloseButton_Click"
+                        WindowChrome.IsHitTestVisibleInChrome="True"/>
+            </Grid>
+
+            <ListBox x:Name="HiddenAppsList" Grid.Row="1" Margin="0,0,0,15" DisplayMemberPath="Value" SelectedValuePath="Key"/>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Restore" Width="120" Click="RestoreSelected_Click"/>
+                <Button Content="Kill" Width="120" Background="#40FF4444" BorderBrush="#80FF4444" Click="KillSelected_Click"/>
+                <Button Content="Restore All" Width="120" Click="RestoreAll_Click"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
