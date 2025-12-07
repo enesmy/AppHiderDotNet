@@ -19,8 +19,7 @@ namespace AppHiderNet
         private const int HOTKEY_ID_NUMPAD = 9000;
         private const int HOTKEY_ID_DIGIT = 9001;
         
-        // Overlay Window
-        private OverlayWindow _overlayWindow;
+ 
 
         // Manager Window
         private MainWindow _mainWindow;
@@ -93,9 +92,7 @@ namespace AppHiderNet
                 System.Windows.MessageBox.Show("Could not register hotkeys (Ctrl+Shift+1 or NumPad1).\nCheck for conflicts.");
             }
             
-            // Initialize Overlay
-            _overlayWindow = new OverlayWindow();
-            _overlayWindow.Show();
+         
 
             LoadState();
         }
