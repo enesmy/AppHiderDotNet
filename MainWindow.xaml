@@ -20,10 +20,14 @@
     <Border Background="{StaticResource GlassBackgroundBrush}" 
             BorderBrush="{StaticResource GlassBorderBrush}" 
             BorderThickness="1" 
-            CornerRadius="15"
+            CornerRadius="16"
             MouseLeftButtonDown="Window_MouseLeftButtonDown">
         
-        <Grid Margin="15">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="0" Opacity="0.5"/>
+        </Border.Effect>
+
+        <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -31,34 +35,78 @@
             </Grid.RowDefinitions>
 
             <!-- Custom Title Bar -->
-            <Grid Grid.Row="0" Margin="0,0,0,15">
-                <TextBlock Text="App Hider Manager" 
-                           Foreground="White" 
-                           FontSize="18" 
-                           FontWeight="Bold" 
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Left"
-                           Margin="10,0,0,0"/>
+            <Grid Grid.Row="0" Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Optional: Add an icon here if available, or just text -->
+                    <TextBlock Text="App Hider" 
+                               Foreground="{StaticResource GlassTextBrush}" 
+                               FontSize="20" 
+                               FontWeight="Bold" 
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="Manager" 
+                               Foreground="{StaticResource GlassTextSecondaryBrush}" 
+                               FontSize="20" 
+                               FontWeight="Regular" 
+                               VerticalAlignment="Center"
+                               Margin="5,0,0,0"/>
+                </StackPanel>
                 
-                <Button Content="✕" 
-                        HorizontalAlignment="Right" 
-                        VerticalAlignment="Center"
-                        Width="30" Height="30"
+                <Button Grid.Column="1"
+                        Content="✕" 
+                        Width="32" Height="32"
                         Padding="0"
                         Background="Transparent"
                         BorderThickness="0"
-                        Foreground="White"
+                        Foreground="{StaticResource GlassTextSecondaryBrush}"
+                        FontSize="16"
                         Click="CloseButton_Click"
-                        WindowChrome.IsHitTestVisibleInChrome="True"/>
+                        WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="btnBorder" Background="Transparent" CornerRadius="16">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="btnBorder" Property="Background" Value="#20FFFFFF"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="btnBorder" Property="Background" Value="#40FF4444"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
             </Grid>
 
-            <ListBox x:Name="HiddenAppsList" Grid.Row="1" Margin="0,0,0,15" DisplayMemberPath="Value" SelectedValuePath="Key"/>
+            <!-- Main Content -->
+            <ListBox x:Name="HiddenAppsList" Grid.Row="1" Margin="0,0,0,20" DisplayMemberPath="Value" SelectedValuePath="Key"/>
 
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Restore" Width="120" Click="RestoreSelected_Click"/>
-                <Button Content="Kill" Width="120" Background="#40FF4444" BorderBrush="#80FF4444" Click="KillSelected_Click"/>
-                <Button Content="Restore All" Width="120" Click="RestoreAll_Click"/>
-            </StackPanel>
+            <!-- Action Buttons -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Content="Scan Apps" Width="100" Height="35" Click="ScanApps_Click" HorizontalAlignment="Left"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Column="2">
+                    <Button Content="Restore" Width="100" Height="35" Click="RestoreSelected_Click"/>
+                    <Button Content="Restore All" Width="100" Height="35" Click="RestoreAll_Click" Margin="10,0"/>
+                    <Button Content="Kill" Width="80" Height="35"
+                            Background="#20FF4444" 
+                            BorderBrush="#40FF4444" 
+                            Click="KillSelected_Click"/>
+                </StackPanel>
+            </Grid>
         </Grid>
     </Border>
 </Window>

@@ -3,6 +3,10 @@ using System.Windows;
 using System.Windows.Threading;
 using System.Windows.Media;
 using System.Windows.Interop;
+using System.Windows.Input;
+using System.Windows.Forms; // For ContextMenuStrip
+using Application = System.Windows.Application; // Resolve ambiguity
+using Point = System.Windows.Point; // Resolve ambiguity
 
 namespace AppHiderNet
 {
@@ -12,15 +16,22 @@ namespace AppHiderNet
         private IntPtr _targetHwnd = IntPtr.Zero;
         private IntPtr _lastTargetHwnd = IntPtr.Zero;
 
+        private bool _isDragging = false;
+        private Point _startPoint;
+
         public OverlayWindow()
         {
             InitializeComponent();
             
             // Set up timer for polling active window
             _timer = new DispatcherTimer();
-            _timer.Interval = TimeSpan.FromMilliseconds(50);
+            _timer.Interval = TimeSpan.FromMilliseconds(100);
             _timer.Tick += Timer_Tick;
             _timer.Start();
+
+            // Initial position (Bottom Right)
+            this.Left = SystemParameters.PrimaryScreenWidth - 100;
+            this.Top = SystemParameters.PrimaryScreenHeight - 150;
         }
 
         private void Timer_Tick(object? sender, EventArgs e)
@@ -36,77 +47,26 @@ namespace AppHiderNet
                 }
 
                 // Filter out invalid windows
-                if (foregroundHwnd == IntPtr.Zero)
-                {
-                    return;
-                }
+                if (foregroundHwnd == IntPtr.Zero) return;
 
                 string title = NativeMethods.GetWindowTitle(foregroundHwnd);
-                // Don't track ourselves or empty titles (usually)
+                // Don't track ourselves or empty titles
                 if (string.IsNullOrEmpty(title) || title == "App Hider .NET" || title == "Overlay")
                 {
-                    this.Visibility = Visibility.Collapsed;
                     return;
                 }
 
                 // Check if window is visible and not minimized
-                if (!NativeMethods.IsWindowVisible(foregroundHwnd))
-                {
-                    this.Visibility = Visibility.Collapsed;
-                    return;
-                }
+                if (!NativeMethods.IsWindowVisible(foregroundHwnd)) return;
 
                 NativeMethods.WINDOWPLACEMENT placement = new NativeMethods.WINDOWPLACEMENT();
                 placement.length = System.Runtime.InteropServices.Marshal.SizeOf(placement);
                 NativeMethods.GetWindowPlacement(foregroundHwnd, ref placement);
 
-                if (placement.showCmd == NativeMethods.SW_SHOWMINIMIZED)
-                {
-                    this.Visibility = Visibility.Collapsed;
-                    return;
-                }
+                if (placement.showCmd == NativeMethods.SW_SHOWMINIMIZED) return;
 
-                // Get Window Rect
-                NativeMethods.RECT rect;
-                if (NativeMethods.GetWindowRect(foregroundHwnd, out rect))
-                {
-                    int x = rect.Left;
-                    int y = rect.Top;
-                    int w = rect.Right - rect.Left;
-                    int h = rect.Bottom - rect.Top;
-
-                    // Position logic
-                    // Standard Windows 10/11 title bar height is roughly 30-40px
-                    // We want to be to the left of the Minimize button.
-                    // Approximate width of Caption Buttons (Min, Max, Close) is ~140px on Win10
-                    
-                    double buttonW = this.Width;
-                    double buttonH = this.Height;
-                    
-                    // Offset from right edge
-                    int offsetRight = 150; 
-                    
-                    double posX = x + w - offsetRight;
-                    double posY = y + 8; // Slight top padding
-                    
-                    // Ensure we are within screen bounds (basic check)
-                    if (posX < 0) posX = 0;
-                    if (posY < 0) posY = 0;
-
-                    this.Left = posX;
-                    this.Top = posY;
-                    
-                    if (this.Visibility != Visibility.Visible)
-                    {
-                        this.Visibility = Visibility.Visible;
-                    }
-                    
-                    // Ensure we are topmost
-                    this.Topmost = true;
-
-                    _targetHwnd = foregroundHwnd;
-                    _lastTargetHwnd = foregroundHwnd;
-                }
+                _targetHwnd = foregroundHwnd;
+                _lastTargetHwnd = foregroundHwnd;
             }
             catch
             {
@@ -114,7 +74,45 @@ namespace AppHiderNet
             }
         }
 
-        private void HideButton_Click(object sender, RoutedEventArgs e)
+        private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount == 2)
+            {
+                // Double Click -> Open Main Window
+                ((App)Application.Current).ShowMainWindow();
+                return;
+            }
+
+            _isDragging = false;
+            _startPoint = e.GetPosition(this);
+            MainContainer.CaptureMouse();
+        }
+
+        private void MainContainer_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (MainContainer.IsMouseCaptured)
+            {
+                Point currentPoint = e.GetPosition(this);
+                if (Math.Abs(currentPoint.X - _startPoint.X) > 5 || Math.Abs(currentPoint.Y - _startPoint.Y) > 5)
+                {
+                    _isDragging = true;
+                    this.DragMove();
+                    MainContainer.ReleaseMouseCapture();
+                }
+            }
+        }
+
+        private void MainContainer_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            MainContainer.ReleaseMouseCapture();
+            if (!_isDragging)
+            {
+                // Click -> Hide Active Window
+                HideTargetWindow();
+            }
+        }
+
+        private void HideTargetWindow()
         {
             IntPtr hwndToHide = _targetHwnd != IntPtr.Zero ? _targetHwnd : _lastTargetHwnd;
             
@@ -128,6 +126,35 @@ namespace AppHiderNet
             }
         }
 
+        private void Window_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            // Show Context Menu with Hidden Apps
+            var contextMenu = new ContextMenuStrip();
+            var hiddenApps = ((App)Application.Current).GetHiddenWindows();
 
+            if (hiddenApps.Count > 0)
+            {
+                foreach (var kvp in hiddenApps)
+                {
+                    var item = new ToolStripMenuItem($"Restore: {kvp.Value}");
+                    item.Tag = kvp.Key;
+                    item.Click += (s, ev) => ((App)Application.Current).ShowHiddenWindowPublic((IntPtr)((ToolStripMenuItem)s).Tag);
+                    contextMenu.Items.Add(item);
+                }
+                contextMenu.Items.Add(new ToolStripSeparator());
+            }
+            else
+            {
+                contextMenu.Items.Add(new ToolStripMenuItem("No hidden apps") { Enabled = false });
+                contextMenu.Items.Add(new ToolStripSeparator());
+            }
+
+            var openMainItem = new ToolStripMenuItem("Open Manager");
+            openMainItem.Click += (s, ev) => ((App)Application.Current).ShowMainWindow();
+            contextMenu.Items.Add(openMainItem);
+
+            // Show at mouse position
+            contextMenu.Show(System.Windows.Forms.Cursor.Position);
+        }
     }
 }

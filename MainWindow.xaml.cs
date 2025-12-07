@@ -85,6 +85,13 @@ namespace AppHiderNet
             this.DragMove();
         }
 
+        private void ScanApps_Click(object sender, RoutedEventArgs e)
+        {
+            var scanWindow = new VisibleAppsWindow();
+            scanWindow.Owner = this;
+            scanWindow.ShowDialog();
+        }
+
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
             // Don't close the app, just hide the window

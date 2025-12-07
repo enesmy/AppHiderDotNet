@@ -27,6 +27,8 @@ namespace AppHiderNet
 
         private static System.Threading.Mutex _mutex = null;
 
+        public Dictionary<IntPtr, string> WindowPasswords { get; set; } = new Dictionary<IntPtr, string>();
+
         protected override void OnStartup(StartupEventArgs e)
         {
             const string appName = "AppHiderNet_Unique_Mutex_Name";
@@ -92,11 +94,52 @@ namespace AppHiderNet
             }
             
             // Initialize Overlay
-            // _overlayWindow = new OverlayWindow();
-            // _overlayWindow.Show();
+            _overlayWindow = new OverlayWindow();
+            _overlayWindow.Show();
+
+            LoadState();
         }
 
-        private void ShowMainWindow()
+        private void LoadState()
+        {
+            var savedApps = StateManager.Load();
+            foreach (var app in savedApps)
+            {
+                IntPtr hwnd = (IntPtr)app.Hwnd;
+                if (NativeMethods.IsWindow(hwnd))
+                {
+                    // Verify it's still running and valid
+                    if (!_hiddenWindows.ContainsKey(hwnd))
+                    {
+                        _hiddenWindows[hwnd] = app.Title;
+                        HiddenWindowsList.Add(new KeyValuePair<IntPtr, string>(hwnd, app.Title));
+                        
+                        if (!string.IsNullOrEmpty(app.Password))
+                        {
+                            WindowPasswords[hwnd] = app.Password;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void SaveState()
+        {
+            var appsToSave = new List<HiddenApp>();
+            foreach (var kvp in _hiddenWindows)
+            {
+                string pwd = WindowPasswords.ContainsKey(kvp.Key) ? WindowPasswords[kvp.Key] : null;
+                appsToSave.Add(new HiddenApp 
+                { 
+                    Hwnd = (long)kvp.Key, 
+                    Title = kvp.Value, 
+                    Password = pwd 
+                });
+            }
+            StateManager.Save(appsToSave);
+        }
+
+        public void ShowMainWindow()
         {
             _mainWindow.Show();
             _mainWindow.WindowState = WindowState.Normal;
@@ -111,7 +154,43 @@ namespace AppHiderNet
 
         public void ShowHiddenWindowPublic(IntPtr hwnd)
         {
+            if (WindowPasswords.ContainsKey(hwnd))
+            {
+                var pwdDialog = new PasswordDialog();
+                pwdDialog.ExpectedPassword = WindowPasswords[hwnd]; // Pass expected password
+                
+                if (pwdDialog.ShowDialog() != true)
+                {
+                    return; // Cancelled or failed (though failed won't return true now)
+                }
+            }
             ShowHiddenWindow(hwnd);
+        }
+
+        public void HideWindowPublic(IntPtr hwnd, string title, string password = null)
+        {
+            if (hwnd != IntPtr.Zero)
+            {
+                NativeMethods.ShowWindow(hwnd, NativeMethods.SW_HIDE);
+                
+                if (!_hiddenWindows.ContainsKey(hwnd))
+                {
+                    _hiddenWindows[hwnd] = title;
+                    
+                    Application.Current.Dispatcher.Invoke(() => 
+                    {
+                        HiddenWindowsList.Add(new KeyValuePair<IntPtr, string>(hwnd, title));
+                    });
+
+                    if (!string.IsNullOrEmpty(password))
+                    {
+                        WindowPasswords[hwnd] = password;
+                    }
+
+                    UpdateContextMenu();
+                    SaveState();
+                }
+            }
         }
 
         private void UpdateContextMenu()
@@ -130,7 +209,7 @@ namespace AppHiderNet
                 {
                     var item = new ToolStripMenuItem($"Show: {kvp.Value}");
                     item.Tag = kvp.Key;
-                    item.Click += (s, e) => ShowHiddenWindow((IntPtr)((ToolStripMenuItem)s).Tag);
+                    item.Click += (s, e) => ShowHiddenWindowPublic((IntPtr)((ToolStripMenuItem)s).Tag);
                     contextMenu.Items.Add(item);
                 }
                 contextMenu.Items.Add(new ToolStripSeparator());
@@ -165,17 +244,7 @@ namespace AppHiderNet
                 string title = NativeMethods.GetWindowTitle(hwnd);
                 if (!string.IsNullOrEmpty(title) && NativeMethods.IsWindowVisible(hwnd))
                 {
-                    NativeMethods.ShowWindow(hwnd, NativeMethods.SW_HIDE);
-                    string displayTitle = title.Length > 30 ? title.Substring(0, 30) + "..." : title;
-                    _hiddenWindows[hwnd] = displayTitle;
-                    
-                    // Force UI thread for collection update
-                    Application.Current.Dispatcher.Invoke(() => 
-                    {
-                        HiddenWindowsList.Add(new KeyValuePair<IntPtr, string>(hwnd, displayTitle));
-                    });
-
-                    UpdateContextMenu();
+                    HideWindowPublic(hwnd, title.Length > 30 ? title.Substring(0, 30) + "..." : title);
                 }
             }
         }
@@ -204,7 +273,13 @@ namespace AppHiderNet
                     }
                 });
 
+                if (WindowPasswords.ContainsKey(hwnd))
+                {
+                    WindowPasswords.Remove(hwnd);
+                }
+
                 UpdateContextMenu();
+                SaveState();
             }
             else
             {
@@ -218,11 +293,8 @@ namespace AppHiderNet
             NativeMethods.UnregisterHotKey(IntPtr.Zero, HOTKEY_ID_NUMPAD);
             NativeMethods.UnregisterHotKey(IntPtr.Zero, HOTKEY_ID_DIGIT);
 
-            // Show all hidden windows
-            foreach (var hwnd in _hiddenWindows.Keys)
-            {
-                NativeMethods.ShowWindow(hwnd, NativeMethods.SW_SHOW);
-            }
+            // Do NOT show hidden windows on exit. They remain hidden.
+            // Persistence handles restoring them on next run.
 
             if (_notifyIcon != null) _notifyIcon.Dispose();
             base.OnExit(e);
