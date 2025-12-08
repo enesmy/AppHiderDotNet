@@ -19,7 +19,11 @@ namespace AppHiderNet
         private const int HOTKEY_ID_NUMPAD = 9000;
         private const int HOTKEY_ID_DIGIT = 9001;
         
- 
+        // Settings Properties
+        public bool StartMinimized { get; set; }
+        public bool ShowOverlayButton { get; set; }
+        public bool PasswordProtectionEnabled { get; set; }
+        public string? MasterPassword { get; set; }
 
         // Manager Window
         private MainWindow _mainWindow;
@@ -43,9 +47,21 @@ namespace AppHiderNet
 
             base.OnStartup(e);
 
+            // Load settings
+            var settings = StateManager.LoadSettings();
+            StartMinimized = settings.StartMinimized;
+            ShowOverlayButton = settings.ShowOverlayButton;
+            PasswordProtectionEnabled = settings.PasswordProtectionEnabled;
+            MasterPassword = settings.MasterPassword;
+
             // Initialize Manager Window
             _mainWindow = new MainWindow();
-            _mainWindow.Show(); // Show on startup so user sees it
+            
+            // Show or hide based on settings
+            if (!StartMinimized)
+            {
+                _mainWindow.Show();
+            }
 
             // Initialize Tray Icon
             _notifyIcon = new NotifyIcon();
@@ -144,6 +160,18 @@ namespace AppHiderNet
             // _mainWindow.RefreshList(); // Not needed with ObservableCollection
         }
 
+        public void ShowAboutWindow()
+        {
+            var aboutWindow = new AboutWindow();
+            aboutWindow.ShowDialog();
+        }
+
+        public void ShowSettingsWindow()
+        {
+            var settingsWindow = new SettingsWindow();
+            settingsWindow.ShowDialog();
+        }
+
         public Dictionary<IntPtr, string> GetHiddenWindows()
         {
             return new Dictionary<IntPtr, string>(_hiddenWindows);
@@ -211,6 +239,15 @@ namespace AppHiderNet
                 }
                 contextMenu.Items.Add(new ToolStripSeparator());
             }
+
+            var settingsItem = new ToolStripMenuItem("Settings");
+            settingsItem.Click += (s, e) => ShowSettingsWindow();
+            contextMenu.Items.Add(settingsItem);
+
+            var aboutItem = new ToolStripMenuItem("About");
+            aboutItem.Click += (s, e) => ShowAboutWindow();
+            contextMenu.Items.Add(aboutItem);
+            contextMenu.Items.Add(new ToolStripSeparator());
 
             var exitItem = new ToolStripMenuItem("Exit");
             exitItem.Click += (s, e) => Shutdown();
@@ -282,6 +319,18 @@ namespace AppHiderNet
             {
                 System.Windows.MessageBox.Show("Window handle not found in list.");
             }
+        }
+
+        public void ShowOverlayButtonWindow()
+        {
+            // TODO: Implement overlay button window if it exists
+            // For now, this is a placeholder for the settings integration
+        }
+
+        public void HideOverlayButtonWindow()
+        {
+            // TODO: Implement overlay button window if it exists
+            // For now, this is a placeholder for the settings integration
         }
 
         protected override void OnExit(ExitEventArgs e)

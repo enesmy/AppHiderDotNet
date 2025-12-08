@@ -42,7 +42,11 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Optional: Add an icon here if available, or just text -->
+                    <TextBlock Text="🔒" 
+                               Foreground="{StaticResource GlassTextBrush}" 
+                               FontSize="18" 
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
                     <TextBlock Text="App Hider" 
                                Foreground="{StaticResource GlassTextBrush}" 
                                FontSize="20" 
