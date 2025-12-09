@@ -51,7 +51,17 @@ namespace AppHiderNet
 
         private void Window_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            this.DragMove();
+            if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed)
+            {
+                try
+                {
+                    this.DragMove();
+                }
+                catch (InvalidOperationException)
+                {
+                    // Ignore - can happen if mouse button is released during the call
+                }
+            }
         }
     }
 }
