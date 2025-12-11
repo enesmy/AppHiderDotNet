@@ -16,8 +16,14 @@ namespace AppHiderNet
         private Dictionary<IntPtr, string> _hiddenWindows = new Dictionary<IntPtr, string>();
         public ObservableCollection<KeyValuePair<IntPtr, string>> HiddenWindowsList { get; } = new ObservableCollection<KeyValuePair<IntPtr, string>>();
         
+        private Dictionary<IntPtr, string> _blurredWindows = new Dictionary<IntPtr, string>();
+        public ObservableCollection<KeyValuePair<IntPtr, string>> BlurredWindowsList { get; } = new ObservableCollection<KeyValuePair<IntPtr, string>>();
+        private Dictionary<IntPtr, Window> _blurOverlays = new Dictionary<IntPtr, Window>();
+        
         private const int HOTKEY_ID_NUMPAD = 9000;
         private const int HOTKEY_ID_DIGIT = 9001;
+        private const int HOTKEY_ID_BLUR_NUMPAD = 9002;
+        private const int HOTKEY_ID_BLUR_DIGIT = 9003;
         
         // Settings Properties
         public bool StartMinimized { get; set; }
@@ -107,6 +113,20 @@ namespace AppHiderNet
             {
                 System.Windows.MessageBox.Show("Could not register hotkeys (Ctrl+Shift+1 or NumPad1).\nCheck for conflicts.");
             }
+
+            // Register Ctrl+Shift+2 for blur
+            bool successBlurNum = NativeMethods.RegisterHotKey(IntPtr.Zero, HOTKEY_ID_BLUR_NUMPAD, 
+                NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT, 
+                (int)Keys.NumPad2);
+
+            bool successBlurDig = NativeMethods.RegisterHotKey(IntPtr.Zero, HOTKEY_ID_BLUR_DIGIT, 
+                NativeMethods.MOD_CONTROL | NativeMethods.MOD_SHIFT, 
+                (int)Keys.D2);
+
+            if (!successBlurNum && !successBlurDig)
+            {
+                System.Windows.MessageBox.Show("Could not register blur hotkeys (Ctrl+Shift+2 or NumPad2).\nCheck for conflicts.");
+            }
             
          
 
@@ -132,6 +152,13 @@ namespace AppHiderNet
                             WindowPasswords[hwnd] = app.Password;
                         }
                     }
+                    
+                    if (app.IsBlurred && !_blurredWindows.ContainsKey(hwnd))
+                    {
+                        _blurredWindows[hwnd] = app.Title;
+                        BlurredWindowsList.Add(new KeyValuePair<IntPtr, string>(hwnd, app.Title));
+                        ApplyBlur(hwnd);
+                    }
                 }
             }
         }
@@ -139,17 +166,41 @@ namespace AppHiderNet
         private void SaveState()
         {
             var appsToSave = new List<HiddenApp>();
+            
+            // Combine hidden and blurred windows
+            var allWindows = new Dictionary<IntPtr, HiddenApp>();
+            
             foreach (var kvp in _hiddenWindows)
             {
                 string pwd = WindowPasswords.ContainsKey(kvp.Key) ? WindowPasswords[kvp.Key] : null;
-                appsToSave.Add(new HiddenApp 
+                allWindows[kvp.Key] = new HiddenApp 
                 { 
                     Hwnd = (long)kvp.Key, 
                     Title = kvp.Value, 
-                    Password = pwd 
-                });
+                    Password = pwd,
+                    IsBlurred = false
+                };
             }
-            StateManager.Save(appsToSave);
+            
+            foreach (var kvp in _blurredWindows)
+            {
+                if (allWindows.ContainsKey(kvp.Key))
+                {
+                    allWindows[kvp.Key].IsBlurred = true;
+                }
+                else
+                {
+                    allWindows[kvp.Key] = new HiddenApp 
+                    { 
+                        Hwnd = (long)kvp.Key, 
+                        Title = kvp.Value, 
+                        Password = null,
+                        IsBlurred = true
+                    };
+                }
+            }
+            
+            StateManager.Save(allWindows.Values.ToList());
         }
 
         public void ShowMainWindow()
@@ -192,7 +243,7 @@ namespace AppHiderNet
             ShowHiddenWindow(hwnd);
         }
 
-        public void HideWindowPublic(IntPtr hwnd, string title, string password = null)
+        public void HideWindowPublic(IntPtr hwnd, string title, string? password = null)
         {
             if (hwnd != IntPtr.Zero)
             {
@@ -239,6 +290,18 @@ namespace AppHiderNet
                 }
                 contextMenu.Items.Add(new ToolStripSeparator());
             }
+            
+            if (_blurredWindows.Count > 0)
+            {
+                foreach (var kvp in _blurredWindows)
+                {
+                    var item = new ToolStripMenuItem($"Unblur: {kvp.Value}");
+                    item.Tag = kvp.Key;
+                    item.Click += (s, e) => RemoveBlurPublic((IntPtr)((ToolStripMenuItem)s).Tag);
+                    contextMenu.Items.Add(item);
+                }
+                contextMenu.Items.Add(new ToolStripSeparator());
+            }
 
             var settingsItem = new ToolStripMenuItem("Settings");
             settingsItem.Click += (s, e) => ShowSettingsWindow();
@@ -266,6 +329,11 @@ namespace AppHiderNet
                 if (id == HOTKEY_ID_NUMPAD || id == HOTKEY_ID_DIGIT)
                 {
                     HideActiveWindow();
+                    handled = true;
+                }
+                else if (id == HOTKEY_ID_BLUR_NUMPAD || id == HOTKEY_ID_BLUR_DIGIT)
+                {
+                    ToggleBlurActiveWindow();
                     handled = true;
                 }
             }
@@ -333,11 +401,126 @@ namespace AppHiderNet
             // For now, this is a placeholder for the settings integration
         }
 
+        private void ToggleBlurActiveWindow()
+        {
+            IntPtr hwnd = NativeMethods.GetForegroundWindow();
+            if (hwnd != IntPtr.Zero)
+            {
+                string title = NativeMethods.GetWindowTitle(hwnd);
+                if (!string.IsNullOrEmpty(title) && NativeMethods.IsWindowVisible(hwnd))
+                {
+                    ToggleBlurWindow(hwnd, title.Length > 30 ? title.Substring(0, 30) + "..." : title);
+                }
+            }
+        }
+
+        private void ToggleBlurWindow(IntPtr hwnd, string title)
+        {
+            if (_blurredWindows.ContainsKey(hwnd))
+            {
+                // Remove blur
+                RemoveBlur(hwnd);
+                _blurredWindows.Remove(hwnd);
+                
+                Application.Current.Dispatcher.Invoke(() => 
+                {
+                    var itemToRemove = BlurredWindowsList.FirstOrDefault(x => x.Key == hwnd);
+                    if (!itemToRemove.Equals(default(KeyValuePair<IntPtr, string>)))
+                    {
+                        BlurredWindowsList.Remove(itemToRemove);
+                    }
+                });
+            }
+            else
+            {
+                // Apply blur
+                if (ApplyBlur(hwnd))
+                {
+                    _blurredWindows[hwnd] = title;
+                    
+                    Application.Current.Dispatcher.Invoke(() => 
+                    {
+                        BlurredWindowsList.Add(new KeyValuePair<IntPtr, string>(hwnd, title));
+                    });
+                }
+            }
+            
+            UpdateContextMenu();
+            SaveState();
+        }
+
+        public void RemoveBlurPublic(IntPtr hwnd)
+        {
+            if (_blurredWindows.ContainsKey(hwnd))
+            {
+                RemoveBlur(hwnd);
+                _blurredWindows.Remove(hwnd);
+                
+                Application.Current.Dispatcher.Invoke(() => 
+                {
+                    var itemToRemove = BlurredWindowsList.FirstOrDefault(x => x.Key == hwnd);
+                    if (!itemToRemove.Equals(default(KeyValuePair<IntPtr, string>)))
+                    {
+                        BlurredWindowsList.Remove(itemToRemove);
+                    }
+                });
+                
+                UpdateContextMenu();
+                SaveState();
+            }
+        }
+
+        private bool ApplyBlur(IntPtr hwnd)
+        {
+            try
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var overlay = new BlurOverlay(hwnd);
+                    overlay.Show();
+                    _blurOverlays[hwnd] = overlay;
+                });
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void RemoveBlur(IntPtr hwnd)
+        {
+            try
+            {
+                if (_blurOverlays.ContainsKey(hwnd))
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        var overlay = _blurOverlays[hwnd];
+                        overlay.Close();
+                        _blurOverlays.Remove(hwnd);
+                    });
+                }
+            }
+            catch
+            {
+                // Ignore errors when removing blur
+            }
+        }
+
         protected override void OnExit(ExitEventArgs e)
         {
             // Unregister Hotkeys
             NativeMethods.UnregisterHotKey(IntPtr.Zero, HOTKEY_ID_NUMPAD);
             NativeMethods.UnregisterHotKey(IntPtr.Zero, HOTKEY_ID_DIGIT);
+            NativeMethods.UnregisterHotKey(IntPtr.Zero, HOTKEY_ID_BLUR_NUMPAD);
+            NativeMethods.UnregisterHotKey(IntPtr.Zero, HOTKEY_ID_BLUR_DIGIT);
+            
+            // Remove blur from all blurred windows
+            foreach (var kvp in _blurredWindows.ToList())
+            {
+                RemoveBlur(kvp.Key);
+            }
 
             // Do NOT show hidden windows on exit. They remain hidden.
             // Persistence handles restoring them on next run.

@@ -7,21 +7,24 @@
 ## ✨ Key Features
 
 *   **👻 Instant Stealth**: Press `Ctrl + Shift + 1` (or `NumPad 1`) to instantly vanish the active window.
-*   **💎 Liquid Glass UI**: A stunning, modern interface featuring a semi-transparent, blur-effect design (Glassmorphism) with custom window chrome.
+*   **� Blur Censorship**: Press `Ctrl + Shift + 2` (or `NumPad 2`) to apply a privacy blur overlay to any window - content becomes completely unreadable while staying visible.
+*   **�💎 Liquid Glass UI**: A stunning, modern interface featuring a semi-transparent, blur-effect design (Glassmorphism) with custom window chrome.
 *   **🖱️ Drag Anywhere**: The Manager Window is fully draggable from any point on its surface for maximum convenience.
 *   **⚡ Kill Switch**: Stuck application? Select it in the manager and hit **Kill** to force-terminate the process immediately.
-*   **📂 System Tray Integration**: Runs silently in the background. Right-click the tray icon to quickly restore specific windows or exit the app.
+*   **📂 System Tray Integration**: Runs silently in the background. Right-click the tray icon to quickly restore specific windows, unblur censored windows, or exit the app.
 *   **🔄 Auto-Sync**: The UI updates in real-time as you hide and restore windows.
 
 ## 🚀 How to Use
 
 1.  **Start the App**: Run `AppHiderNet.exe`. The app will start quietly in the system tray.
 2.  **Hide a Window**: Click on any window you want to hide and press **`Ctrl + Shift + 1`**. It will disappear instantly!
-3.  **Manage Hidden Apps**:
+3.  **Blur a Window**: Click on any window you want to censor and press **`Ctrl + Shift + 2`**. A blur overlay will cover the content!
+4.  **Manage Hidden Apps**:
     *   Double-click the **Tray Icon** (bottom right) to open the **Manager Window**.
     *   **Restore**: Select an app and click "Restore" to bring it back.
     *   **Kill**: Select an app and click "Kill" to close it permanently.
     *   **Restore All**: Bring back everything at once.
+5.  **Unblur a Window**: Press **`Ctrl + Shift + 2`** again on a blurred window, or use the tray menu to remove blur.
 
 ## 🛠️ Technologies Used
 
