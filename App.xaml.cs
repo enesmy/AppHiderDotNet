@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows;
@@ -19,6 +19,7 @@ namespace AppHiderNet
         private Dictionary<IntPtr, string> _blurredWindows = new Dictionary<IntPtr, string>();
         public ObservableCollection<KeyValuePair<IntPtr, string>> BlurredWindowsList { get; } = new ObservableCollection<KeyValuePair<IntPtr, string>>();
         private Dictionary<IntPtr, Window> _blurOverlays = new Dictionary<IntPtr, Window>();
+        private List<CensorOverlayWindow> _censoredAreas = new List<CensorOverlayWindow>();
         
         private const int HOTKEY_ID_NUMPAD = 9000;
         private const int HOTKEY_ID_DIGIT = 9001;
@@ -243,10 +244,19 @@ namespace AppHiderNet
             ShowHiddenWindow(hwnd);
         }
 
+        private bool IsSelf(IntPtr hwnd)
+        {
+            uint pid;
+            NativeMethods.GetWindowThreadProcessId(hwnd, out pid);
+            return pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+        }
+
         public void HideWindowPublic(IntPtr hwnd, string title, string? password = null)
         {
             if (hwnd != IntPtr.Zero)
             {
+                if (IsSelf(hwnd)) return;
+
                 NativeMethods.ShowWindow(hwnd, NativeMethods.SW_HIDE);
                 
                 if (!_hiddenWindows.ContainsKey(hwnd))
@@ -302,6 +312,19 @@ namespace AppHiderNet
                 }
                 contextMenu.Items.Add(new ToolStripSeparator());
             }
+
+            var censorAreaItem = new ToolStripMenuItem("Censor Area");
+            censorAreaItem.Click += (s, e) => StartAreaSelection();
+            contextMenu.Items.Add(censorAreaItem);
+
+            if (_censoredAreas.Count > 0)
+            {
+                var clearCensorsItem = new ToolStripMenuItem("Clear All Censored Areas");
+                clearCensorsItem.Click += (s, e) => ClearAllCensoredAreas();
+                contextMenu.Items.Add(clearCensorsItem);
+            }
+            
+            contextMenu.Items.Add(new ToolStripSeparator());
 
             var settingsItem = new ToolStripMenuItem("Settings");
             settingsItem.Click += (s, e) => ShowSettingsWindow();
@@ -414,6 +437,11 @@ namespace AppHiderNet
             }
         }
 
+        public void ToggleBlurWindowPublic(IntPtr hwnd, string title)
+        {
+            ToggleBlurWindow(hwnd, title);
+        }
+
         private void ToggleBlurWindow(IntPtr hwnd, string title)
         {
             if (_blurredWindows.ContainsKey(hwnd))
@@ -433,6 +461,9 @@ namespace AppHiderNet
             }
             else
             {
+                // Prevent self-blurring
+                if (IsSelf(hwnd)) return;
+
                 // Apply blur
                 if (ApplyBlur(hwnd))
                 {
@@ -506,6 +537,42 @@ namespace AppHiderNet
             {
                 // Ignore errors when removing blur
             }
+        }
+
+        private void StartAreaSelection()
+        {
+            var selectionWindow = new AreaSelectionWindow();
+            selectionWindow.Closed += (s, e) =>
+            {
+                if (selectionWindow.IsSelectionConfirmed)
+                {
+                    CreateCensorOverlay(selectionWindow.SelectedArea);
+                }
+            };
+            selectionWindow.Show();
+        }
+
+        private void CreateCensorOverlay(Rect area)
+        {
+            var overlay = new CensorOverlayWindow(area);
+            overlay.RequestClose += (s, e) =>
+            {
+                _censoredAreas.Remove(overlay);
+                UpdateContextMenu();
+            };
+            _censoredAreas.Add(overlay);
+            overlay.Show();
+            UpdateContextMenu();
+        }
+
+        private void ClearAllCensoredAreas()
+        {
+            foreach (var overlay in _censoredAreas.ToList())
+            {
+                overlay.Close();
+            }
+            _censoredAreas.Clear();
+            UpdateContextMenu();
         }
 
         protected override void OnExit(ExitEventArgs e)

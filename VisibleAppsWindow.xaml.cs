@@ -27,6 +27,13 @@ namespace AppHiderNet
             
             // Initially disable master password checkbox
             UseMasterPasswordCheck.IsEnabled = false;
+
+            // Hide master password checkbox if not set
+            var app = (App)System.Windows.Application.Current;
+            if (string.IsNullOrWhiteSpace(app.MasterPassword))
+            {
+                UseMasterPasswordCheck.Visibility = Visibility.Collapsed;
+            }
         }
 
         private void LoadApps()
@@ -98,6 +105,20 @@ namespace AppHiderNet
             foreach (var item in selectedApps)
             {
                 appInstance.HideWindowPublic(item.Hwnd, item.Title, password);
+            }
+
+            this.Close();
+        }
+
+        private void BlurSelected_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedApps = AppsList.SelectedItems.Cast<AppItem>().ToList();
+            if (selectedApps.Count == 0) return;
+
+            var appInstance = (App)System.Windows.Application.Current;
+            foreach (var item in selectedApps)
+            {
+                appInstance.ToggleBlurWindowPublic(item.Hwnd, item.Title);
             }
 
             this.Close();
