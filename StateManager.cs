@@ -11,6 +11,8 @@ namespace AppHiderNet
         public bool ShowOverlayButton { get; set; }
         public bool PasswordProtectionEnabled { get; set; }
         public string? MasterPassword { get; set; }
+        public List<string> SafeModeAppPaths { get; set; } = new List<string>();
+        public string? SafeModePassword { get; set; }
     }
 
     public static class StateManager
@@ -49,7 +51,7 @@ namespace AppHiderNet
             return new List<HiddenApp>();
         }
 
-        public static void SaveSettings(bool startMinimized, bool showOverlay, bool passwordProtection, string? masterPassword)
+        public static void SaveSettings(bool startMinimized, bool showOverlay, bool passwordProtection, string? masterPassword, List<string> safeModeAppPaths, string? safeModePassword)
         {
             try
             {
@@ -58,7 +60,9 @@ namespace AppHiderNet
                     StartMinimized = startMinimized,
                     ShowOverlayButton = showOverlay,
                     PasswordProtectionEnabled = passwordProtection,
-                    MasterPassword = masterPassword
+                    MasterPassword = masterPassword,
+                    SafeModeAppPaths = safeModeAppPaths,
+                    SafeModePassword = safeModePassword
                 };
                 string json = JsonSerializer.Serialize(settings);
                 File.WriteAllText(SettingsFilePath, json);

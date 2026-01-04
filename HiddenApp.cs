@@ -8,5 +8,6 @@ namespace AppHiderNet
         public string Title { get; set; }
         public string Password { get; set; }
         public bool IsBlurred { get; set; }
+        public NativeMethods.WINDOWPLACEMENT Placement { get; set; }
     }
 }

@@ -1,0 +1,132 @@
+<Window x:Class="AppHiderNet.SafeModeManagerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Safe Mode Settings" Height="450" Width="600"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        WindowStartupLocation="CenterScreen">
+
+    <Border Background="{StaticResource GlassBackgroundBrush}" 
+            BorderBrush="{StaticResource GlassBorderBrush}" 
+            BorderThickness="1" 
+            CornerRadius="16"
+            MouseLeftButtonDown="Window_MouseLeftButtonDown">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="0" Opacity="0.5"/>
+        </Border.Effect>
+
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="0,0,0,15">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="🔐" 
+                               Foreground="{StaticResource GlassTextBrush}" 
+                               FontSize="18" 
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+                    <TextBlock Text="Safe Mode Settings" 
+                               Foreground="{StaticResource GlassTextBrush}" 
+                               FontSize="20" 
+                               FontWeight="Bold" 
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                
+                <Button Content="✕" 
+                        HorizontalAlignment="Right" 
+                        VerticalAlignment="Center"
+                        Width="32" Height="32"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="{StaticResource GlassTextSecondaryBrush}"
+                        FontSize="16"
+                        Click="CloseButton_Click"/>
+            </Grid>
+
+            <!-- Content -->
+            <Grid Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- List Header -->
+                <TextBlock Grid.Row="0" 
+                           Text="Apps in Safe Mode List:" 
+                           Foreground="{StaticResource GlassTextBrush}"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,8"/>
+
+                <!-- Apps List -->
+                <ListBox x:Name="SafeModeAppsList" 
+                         Grid.Row="1" 
+                         Margin="0,0,0,15" 
+                         SelectionMode="Single"
+                         Height="150"/>
+
+                <!-- Remove Button -->
+                <Button Grid.Row="2" 
+                        Content="Remove Selected" 
+                        Width="150" 
+                        Height="35" 
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,15"
+                        Click="RemoveSelected_Click"/>
+
+                <!-- Password Settings -->
+                <StackPanel Grid.Row="3">
+                    <CheckBox x:Name="RequirePasswordCheck" 
+                              Content="Require Password to Enable Safe Mode" 
+                              Foreground="{StaticResource GlassTextBrush}"
+                              Margin="0,0,0,10"
+                              Checked="RequirePasswordCheck_Changed"
+                              Unchecked="RequirePasswordCheck_Changed"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Grid.Column="0" 
+                                   Text="Password:" 
+                                   Foreground="{StaticResource GlassTextBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+                        <PasswordBox x:Name="SafeModePasswordBox" 
+                                     Grid.Column="1" 
+                                     Height="35"
+                                     IsEnabled="False"/>
+                    </Grid>
+                </StackPanel>
+            </Grid>
+
+            <!-- Footer Buttons -->
+            <StackPanel Grid.Row="2" 
+                        Orientation="Horizontal" 
+                        HorizontalAlignment="Right"
+                        Margin="0,15,0,0">
+                <Button Content="Save" 
+                        Width="120" 
+                        Height="35" 
+                        Margin="0,0,10,0"
+                        Click="Save_Click"/>
+                <Button Content="Close" 
+                        Width="120" 
+                        Height="35"
+                        Click="CloseButton_Click"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

@@ -109,7 +109,7 @@ namespace AppHiderNet
             app.MasterPassword = string.IsNullOrWhiteSpace(MasterPasswordBox.Password) ? null : MasterPasswordBox.Password;
             
             // Save to persistent storage (you might want to use a config file)
-            StateManager.SaveSettings(app.StartMinimized, app.ShowOverlayButton, app.PasswordProtectionEnabled, app.MasterPassword);
+            StateManager.SaveSettings(app.StartMinimized, app.ShowOverlayButton, app.PasswordProtectionEnabled, app.MasterPassword, app.SafeModeAppPaths, app.SafeModePassword);
             
             System.Windows.MessageBox.Show("Settings saved!", "Success", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
             this.Close();

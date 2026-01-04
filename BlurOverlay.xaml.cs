@@ -56,9 +56,7 @@ namespace AppHiderNet
             if (e.Key == Key.System && e.SystemKey == Key.F4)
             {
                 e.Handled = true;
-            }
-            // Prevent all other key inputs to the overlay
-            e.Handled = true;
+            }     
         }
 
         private void UpdateTimer_Tick(object sender, EventArgs e)

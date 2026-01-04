@@ -13,7 +13,8 @@ namespace AppHiderNet
         {
             public IntPtr Hwnd { get; set; }
             public string Title { get; set; }
-            public override string ToString() => Title;
+            public string ExePath { get; set; }
+            public override string ToString() => $"{Title} ({ExePath})";
         }
 
         public VisibleAppsWindow()
@@ -49,7 +50,8 @@ namespace AppHiderNet
 
                     if (!string.IsNullOrWhiteSpace(title) && title != "App Hider Manager" && title != "Overlay" && title != "Program Manager")
                     {
-                        apps.Add(new AppItem { Hwnd = hwnd, Title = title });
+                        string exePath = NativeMethods.GetProcessPath(hwnd);
+                        apps.Add(new AppItem { Hwnd = hwnd, Title = title, ExePath = exePath });
                     }
                 }
                 return true;
@@ -119,6 +121,42 @@ namespace AppHiderNet
             foreach (var item in selectedApps)
             {
                 appInstance.ToggleBlurWindowPublic(item.Hwnd, item.Title);
+            }
+
+            this.Close();
+        }
+
+        private void AddToSafeMode_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedApps = AppsList.SelectedItems.Cast<AppItem>().ToList();
+            if (selectedApps.Count == 0) return;
+
+            var appInstance = (App)System.Windows.Application.Current;
+            int addedCount = 0;
+            foreach (var item in selectedApps)
+            {
+                if (!string.IsNullOrEmpty(item.ExePath) && !appInstance.SafeModeAppPaths.Contains(item.ExePath))
+                {
+                    appInstance.SafeModeAppPaths.Add(item.ExePath);
+                    addedCount++;
+                }
+            }
+
+            if (addedCount > 0)
+            {
+                StateManager.SaveSettings(
+                    appInstance.StartMinimized, 
+                    appInstance.ShowOverlayButton, 
+                    appInstance.PasswordProtectionEnabled, 
+                    appInstance.MasterPassword,
+                    appInstance.SafeModeAppPaths,
+                    appInstance.SafeModePassword);
+                
+                System.Windows.MessageBox.Show($"{addedCount} apps added to Safe Mode list.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Selected apps are already in Safe Mode list.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
             }
 
             this.Close();
